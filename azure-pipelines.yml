@@ -55,18 +55,9 @@ stages:
             arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
             zipAfterPublish: True
           
-
-- stage: PlanAndDeploy
-  displayName: 'Terraform Plan and Apply'
-  jobs:
-    - job: TerraformPlan
-      displayName: 'Terraform Plan'
-      pool:
-        vmImage: 'ubuntu-latest'
-      steps:
-        - task: TerraformInstaller@0
-          inputs:
-            terraformVersion: '1.0.x'  # Pin to a specific version for stability
+        - task: TerraformInstaller@1
+        inputs:
+          terraformVersion: 'latest'
 
         - script: |
             terraform --version
