@@ -6,7 +6,6 @@ variables:
   RestoreBuildProjects: '**/*.csproj'
   BuildConfiguration: 'Release'  # Example configuration, adjust as needed
 
-
 stages:
 - stage: BuildAndTest
   displayName: 'Build and Test'
@@ -26,14 +25,6 @@ stages:
             projects: '$(RestoreBuildProjects)'
             arguments: '--configuration $(BuildConfiguration)'
             workingDirectory: 'Backend'
-
-        # Enable the 'Run' task if needed
-        #- task: DotNetCoreCLI@2
-        #  displayName: Run
-        #  inputs:
-        #    command: run
-        #    projects: '$(RestoreBuildProjects)'
-        #    workingDirectory: 'Backend'
 
         - task: DotNetCoreCLI@2
           displayName: Test
