@@ -1,54 +1,96 @@
-trigger:
-  branches:
-    include:
-      - main  # Adjust as per your branch naming
-
 pool:
-  vmImage: 'ubuntu-latest'
+  name: Azure Pipelines
 
 variables:
-  BuildConfiguration: 'Release'
+  # Define your variables here
   RestoreBuildProjects: '**/*.csproj'
-  TestProjects: '**/*.Tests.csproj'
+  BuildConfiguration: 'Release'  # Example configuration, adjust as needed
+  storageAccountName: 'your_storage_account_name'
+  containerName: 'your_container_name'
+  key: 'your_key'
+  accessKey: $(AzureStorageAccountKey)  # Example of accessing secret from Azure Key Vault, adjust as needed
+  # Define $(Parameters.TestProjects) if used in your pipeline
 
-jobs:
-- job: BuildAndTest
-  displayName: 'Build and Test .NET Core Application'
-  pool:
-    vmImage: 'ubuntu-latest'
+stages:
+- stage: BuildAndTest
+  displayName: 'Build and Test'
+  jobs:
+    - job: BuildAndTestJob
+      displayName: 'Build, Test, and Publish'
+      steps:
+        - task: DotNetCoreCLI@2
+          displayName: Restore
+          inputs:
+            command: restore
+            projects: '$(RestoreBuildProjects)'
 
-  steps:
-  - task: DotNetCoreCLI@2
-    displayName: Restore
-    inputs:
-      command: restore
-      projects: '$(RestoreBuildProjects)'
+        - task: DotNetCoreCLI@2
+          displayName: Build
+          inputs:
+            projects: '$(RestoreBuildProjects)'
+            arguments: '--configuration $(BuildConfiguration)'
+            workingDirectory: 'Backend'
 
-  - task: DotNetCoreCLI@2
-    displayName: Build
-    inputs:
-      projects: '$(RestoreBuildProjects)'
-      arguments: '--configuration $(BuildConfiguration)'
-      workingDirectory: 'Backend'  # Adjust if necessary
+        # Enable the 'Run' task if needed
+        #- task: DotNetCoreCLI@2
+        #  displayName: Run
+        #  inputs:
+        #    command: run
+        #    projects: '$(RestoreBuildProjects)'
+        #    workingDirectory: 'Backend'
 
-  - task: DotNetCoreCLI@2
-    displayName: Test
-    inputs:
-      command: test
-      projects: '$(TestProjects)'
-      arguments: '--configuration $(BuildConfiguration)'
-      workingDirectory: 'Backend'  # Adjust if necessary
+        - task: DotNetCoreCLI@2
+          displayName: Test
+          inputs:
+            command: test
+            projects: '$(Parameters.TestProjects)'
+            arguments: '--configuration $(BuildConfiguration)'
+            workingDirectory: 'Backend'
 
-  - task: DotNetCoreCLI@2
-    displayName: Publish
-    inputs:
-      command: publish
-      publishWebProjects: True
-      arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
-      zipAfterPublish: True
+        - task: DotNetCoreCLI@2
+          displayName: Publish
+          inputs:
+            command: publish
+            publishWebProjects: True
+            arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
+            zipAfterPublish: True
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Artifact'
-    inputs:
-      PathtoPublish: '$(build.artifactstagingdirectory)'
-    condition: succeededOrFailed()
+- stage: PlanAndDeploy
+  displayName: 'Terraform Plan and Apply'
+  jobs:
+    - job: TerraformPlan
+      displayName: 'Terraform Plan'
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - task: TerraformInstaller@0
+          inputs:
+            terraformVersion: '1.0.x'  # Pin to a specific version for stability
+
+        - script: |
+            terraform --version
+            terraform init -backend-config="storage_account_name=$(storageAccountName)" \
+                           -backend-config="container_name=$(containerName)" \
+                           -backend-config="key=$(key)" \
+                           -backend-config="access_key=$(accessKey)"
+            terraform plan -out=tfplan
+          displayName: 'Terraform Init and Plan'
+
+    - job: TerraformApply
+      displayName: 'Terraform Apply'
+      dependsOn: TerraformPlan
+      pool:
+        vmImage: 'ubuntu-latest'
+      steps:
+        - task: TerraformInstaller@0
+          inputs:
+            terraformVersion: '1.0.x'  # Pin to a specific version for stability
+
+        - script: |
+            terraform --version
+            terraform init -backend-config="storage_account_name=$(storageAccountName)" \
+                           -backend-config="container_name=$(containerName)" \
+                           -backend-config="key=$(key)" \
+                           -backend-config="access_key=$(accessKey)"
+            terraform apply -auto-approve tfplan
+          displayName: 'Terraform Init and Apply'
