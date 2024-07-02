@@ -42,12 +42,12 @@ stages:
             arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
             zipAfterPublish: True
           
-    - task: TerraformInstaller@1
-      inputs:
-        terraformVersion: 'latest'
+        - task: TerraformInstaller@1
+          inputs:
+            terraformVersion: 'latest'
+        - task: TerraformTaskV1@0
+          inputs:
+            command: 'init'
+            arguments: 'terraform --version'
 
-    - script: |
-        terraform --version
-        terraform init 
-        terraform plan -out=tfplan
-      displayName: 'Terraform Init and Plan'
+
