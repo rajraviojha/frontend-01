@@ -54,6 +54,7 @@ stages:
             publishWebProjects: True
             arguments: '--configuration $(BuildConfiguration) --output $(build.artifactstagingdirectory)'
             zipAfterPublish: True
+          
 
 - stage: PlanAndDeploy
   displayName: 'Terraform Plan and Apply'
@@ -69,28 +70,7 @@ stages:
 
         - script: |
             terraform --version
-            terraform init -backend-config="storage_account_name=$(storageAccountName)" \
-                           -backend-config="container_name=$(containerName)" \
-                           -backend-config="key=$(key)" \
-                           -backend-config="access_key=$(accessKey)"
+            terraform init 
             terraform plan -out=tfplan
           displayName: 'Terraform Init and Plan'
 
-    - job: TerraformApply
-      displayName: 'Terraform Apply'
-      dependsOn: TerraformPlan
-      pool:
-        vmImage: 'ubuntu-latest'
-      steps:
-        - task: TerraformInstaller@0
-          inputs:
-            terraformVersion: '1.0.x'  # Pin to a specific version for stability
-
-        - script: |
-            terraform --version
-            terraform init -backend-config="storage_account_name=$(storageAccountName)" \
-                           -backend-config="container_name=$(containerName)" \
-                           -backend-config="key=$(key)" \
-                           -backend-config="access_key=$(accessKey)"
-            terraform apply -auto-approve tfplan
-          displayName: 'Terraform Init and Apply'
