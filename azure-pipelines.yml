@@ -5,11 +5,7 @@ variables:
   # Define your variables here
   RestoreBuildProjects: '**/*.csproj'
   BuildConfiguration: 'Release'  # Example configuration, adjust as needed
-  storageAccountName: 'your_storage_account_name'
-  containerName: 'your_container_name'
-  key: 'your_key'
-  accessKey: $(AzureStorageAccountKey)  # Example of accessing secret from Azure Key Vault, adjust as needed
-  # Define $(Parameters.TestProjects) if used in your pipeline
+
 
 stages:
 - stage: BuildAndTest
